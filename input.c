@@ -13,6 +13,7 @@ struct input_state_t {
     int pos_x, pos_y;
     int pressed_pos_x, pressed_pos_y;
     int fd_timer; // The timer used to execute right click on timeout
+    int right_state;
     struct libevdev_uinput *uinput;
 };
 
@@ -32,6 +33,7 @@ int build_fd_set(fd_set *fds, int fd_timer,
     for (unsigned int i = 0; i < num; i++) {
         fd = libevdev_get_fd(evdev[i]);
         FD_SET(fd, fds);
+	libevdev_grab(evdev[i], LIBEVDEV_GRAB);
         if (fd > max_fd)
             max_fd = fd;
     }
@@ -68,6 +70,12 @@ void on_input_event(struct input_state_t *state,
     if (state->pressed_device_id != -1 && dev_id != state->pressed_device_id)
         return;
 
+    if(state->right_state>0&&ev->type==EV_ABS&&ev->code==ABS_MT_TRACKING_ID&&ev->value==-1) {
+        state->right_state=0;
+    } else {
+        libevdev_uinput_write_event(state->uinput, ev->type, ev->code, ev->value);
+    }
+
     if (ev->type == EV_ABS) {
         // Absolute position event
         // Record the current position
@@ -96,8 +104,11 @@ void on_timer_expire(struct input_state_t *state) {
     // Only consider movement within a range to be "still"
     // i.e. if movement is within this value during timeout
     //      , then it is a long click
-    if (dx <= LONG_CLICK_FUZZ && dy <= LONG_CLICK_FUZZ)
+    if (dx <= LONG_CLICK_FUZZ && dy <= LONG_CLICK_FUZZ) {
+        libevdev_uinput_write_event(state->uinput,EV_ABS,ABS_MT_TRACKING_ID,-1);
+        state->right_state=1;
         uinput_send_right_click(state->uinput);
+    }
     // In Linux implementation of timerfd, the fd becomes always "readable"
     // after the timeout. So we have to unarm it after we receive the event.
     unarm_delayed_rclick(state);
