@@ -9,9 +9,20 @@
 #include <unistd.h>
 #include "rce.h"
 #include "input.h"
+#include <X11/Xlib.h>
 
 #define DIR_DEV_INPUT "/dev/input"
 #define EVDEV_PREFIX "event"
+Atom XDUMMYA; int XDUMMYB; unsigned long XDUMMYC; Window XWIN; int XREV; unsigned char* XBUF = NULL; Display* dpy;
+int is_wmclass() {
+	XGetInputFocus(dpy, &XWIN, &XREV);
+	XGetWindowProperty(dpy, XWIN, XInternAtom(dpy, "WM_CLASS", True), 0, 4096, False, AnyPropertyType, &XDUMMYA, &XDUMMYB, &XDUMMYC, &XDUMMYC, &XBUF);
+	if(XBUF!=NULL) {
+		return (strcmp((char*)XBUF,"FlexivElementsStudio")==0)?1:0;
+	} else {
+		return 0;
+	}
+}
 
 struct timespec LONG_CLICK_INTERVAL = {
     .tv_sec = 1,
@@ -119,6 +130,11 @@ int find_evdev(struct libevdev **devices) {
 }
 
 int main() {
+    while(1) {
+        dpy = XOpenDisplay(":0");
+	if(dpy) break;
+	sleep(1);
+    }
     // Try to read some configurable options from env
     char *env = NULL;
     if ((env = getenv("LONG_CLICK_INTERVAL")) != NULL) {

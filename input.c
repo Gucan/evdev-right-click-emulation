@@ -104,7 +104,7 @@ void on_timer_expire(struct input_state_t *state) {
     // Only consider movement within a range to be "still"
     // i.e. if movement is within this value during timeout
     //      , then it is a long click
-    if (dx <= LONG_CLICK_FUZZ && dy <= LONG_CLICK_FUZZ) {
+    if (dx <= LONG_CLICK_FUZZ && dy <= LONG_CLICK_FUZZ && !is_wmclass()) {
         libevdev_uinput_write_event(state->uinput,EV_ABS,ABS_MT_TRACKING_ID,-1);
         state->right_state=1;
         uinput_send_right_click(state->uinput);

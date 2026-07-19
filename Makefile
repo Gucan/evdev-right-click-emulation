@@ -1,6 +1,6 @@
 CC := gcc
 XFLAGS := -Wall -std=c11 -D_POSIX_C_SOURCE=199309L
-LIBRARIES := -levdev
+LIBRARIES := -levdev -lX11
 INCLUDES := -I/usr/include/libevdev-1.0
 CFLAGS := $(XFLAGS) $(LIBRARIES) $(INCLUDES)
 
