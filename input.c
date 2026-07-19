@@ -14,6 +14,7 @@ struct input_state_t {
     int pressed_pos_x, pressed_pos_y;
     int fd_timer; // The timer used to execute right click on timeout
     int right_state;
+    int slot_state;
     struct libevdev_uinput *uinput;
 };
 
@@ -70,7 +71,10 @@ void on_input_event(struct input_state_t *state,
     if (state->pressed_device_id != -1 && dev_id != state->pressed_device_id)
         return;
 
-    if(state->right_state>0&&ev->type==EV_ABS&&ev->code==ABS_MT_TRACKING_ID&&ev->value==-1) {
+    if(ev->code==ABS_MT_SLOT&&ev->value==1) {
+        state->slot_state=1;
+    }
+    if(state->right_state>0&&ev->type==EV_ABS&&ev->code==ABS_MT_TRACKING_ID&&ev->value==-1&&state->slot_state==0) {
         state->right_state=0;
     } else {
         libevdev_uinput_write_event(state->uinput, ev->type, ev->code, ev->value);
