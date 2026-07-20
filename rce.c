@@ -13,12 +13,19 @@
 
 #define DIR_DEV_INPUT "/dev/input"
 #define EVDEV_PREFIX "event"
+char WMCLASS[64][64];
+int WMCLASS_NUM=0;
 Atom XDUMMYA; int XDUMMYB; unsigned long XDUMMYC; Window XWIN; int XREV; unsigned char* XBUF = NULL; Display* dpy;
 int is_wmclass() {
 	XGetInputFocus(dpy, &XWIN, &XREV);
 	XGetWindowProperty(dpy, XWIN, XInternAtom(dpy, "WM_CLASS", True), 0, 4096, False, AnyPropertyType, &XDUMMYA, &XDUMMYB, &XDUMMYC, &XDUMMYC, &XBUF);
 	if(XBUF!=NULL) {
-		return (strcmp((char*)XBUF,"FlexivElementsStudio")==0)?1:0;
+		for(int line=0;line<WMCLASS_NUM;line++) {
+			if(!strcmp((char*)XBUF,WMCLASS[line])) {
+				return 1;
+			}
+		}
+		return 0;
 	} else {
 		return 0;
 	}
@@ -130,6 +137,14 @@ int find_evdev(struct libevdev **devices) {
 }
 
 int main() {
+    FILE *configfile=fopen("/etc/rce/rce.conf","r");
+    if(configfile) {
+	    while(fgets(WMCLASS[WMCLASS_NUM],64,configfile)) {
+		    WMCLASS[WMCLASS_NUM][strcspn(WMCLASS[WMCLASS_NUM],"\n")]='\0';
+		    WMCLASS_NUM++;
+	    }
+    }
+    fclose(configfile);
     while(1) {
         dpy = XOpenDisplay(":0");
 	if(dpy) break;
