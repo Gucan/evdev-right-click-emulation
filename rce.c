@@ -10,25 +10,26 @@
 #include "rce.h"
 #include "input.h"
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
 
 #define DIR_DEV_INPUT "/dev/input"
 #define EVDEV_PREFIX "event"
 char WMCLASS[64][64];
 int WMCLASS_NUM=0;
-Atom XDUMMYA; int XDUMMYB; unsigned long XDUMMYC; Window XWIN; int XREV; unsigned char* XBUF = NULL; Display* dpy;
+Atom XDUMMYA,XATOM; int XDUMMYB; unsigned long XDUMMYC; Window XWIN; int XREV; unsigned char* XBUF = NULL; Display* dpy; XClassHint class_hint;
 int is_wmclass() {
-	XGetInputFocus(dpy, &XWIN, &XREV);
-	XGetWindowProperty(dpy, XWIN, XInternAtom(dpy, "WM_CLASS", True), 0, 4096, False, AnyPropertyType, &XDUMMYA, &XDUMMYB, &XDUMMYC, &XDUMMYC, &XBUF);
-	if(XBUF!=NULL) {
-		for(int line=0;line<WMCLASS_NUM;line++) {
-			if(!strcmp((char*)XBUF,WMCLASS[line])) {
-				return 1;
+	if(XGetWindowProperty(dpy, XWIN, XInternAtom(dpy, "_NET_ACTIVE_WINDOW", True), 0, 1, False, XA_WINDOW, &XDUMMYA, &XDUMMYB, &XDUMMYC, &XDUMMYC, &XBUF) == Success || XBUF != NULL) {
+		if(XGetClassHint(dpy, *(Window *)XBUF, &class_hint) == 1) {
+			for(int line=0; line<WMCLASS_NUM; line++) {
+				if(!strcmp(class_hint.res_class,WMCLASS[line])) return 1;
 			}
 		}
-		return 0;
-	} else {
-		return 0;
 	}
+	return 0;
+}
+int XERR(Display *dpy,XErrorEvent *err) {
+	return 0;
 }
 
 struct timespec LONG_CLICK_INTERVAL = {
@@ -144,6 +145,9 @@ int main() {
 		if(dpy) break;
 		sleep(1);
 	}
+	XSetErrorHandler(XERR);
+	XWIN=DefaultRootWindow(dpy);
+	XATOM=XInternAtom(dpy, "_NET_ACTIVE_WINDOW", True);
 	// Try to read some configurable options from env
 	char *env = NULL;
 	if((env = getenv("LONG_CLICK_INTERVAL")) != NULL) {
